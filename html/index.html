@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WinDos Net Terminal</title>
+    <link rel="stylesheet" href="./main.css" />
+    <script src="./js/app.js" defer></script>
+</head>
+<body>
+    <audio id="boot-audio" src="./assets/audio/windosStartup.ogg"></audio>
+
+    <main id="terminal" class="terminal hidden" aria-label="WinDos internet terminal">
+        <div class="screen-curve"></div>
+        <div class="crt-lines"></div>
+        <div class="crt-glare"></div>
+
+        <section id="boot" class="boot active">
+            <div class="boot-card">
+                <div class="boot-logo">WinDos</div>
+                <div class="boot-subtitle" id="boot-subtitle">Public access gateway</div>
+                <div class="boot-loader"><i></i></div>
+                <p id="boot-text">Starting TCP/IP stack...</p>
+            </div>
+        </section>
+
+        <section id="desktop" class="desktop">
+            <div class="wallpaper-badge">
+                <img id="wallpaper-logo" src="./assets/images/server-logo.png" alt="Server logo" />
+                <strong id="terminal-title">WinDos Net Terminal</strong>
+                <span>56k public network access</span>
+            </div>
+
+            <button class="desktop-icon" data-app="home" style="--x: 28px; --y: 28px;">
+                <span class="icon-art icon-terminal" aria-hidden="true"></span><em>My Terminal</em>
+            </button>
+            <button class="desktop-icon" data-app="mail" style="--x: 28px; --y: 126px;">
+                <span class="icon-art icon-hotpost" aria-hidden="true"></span><em>HotPost</em><b id="mail-badge" class="badge hidden">0</b>
+            </button>
+            <button class="desktop-icon" data-app="fleabay" style="--x: 28px; --y: 224px;">
+                <span class="icon-art icon-fleabay" aria-hidden="true"></span><em>FleaBay</em>
+            </button>
+            <button class="desktop-icon" data-app="jobs" style="--x: 28px; --y: 322px;">
+                <span class="icon-art icon-jobboard" aria-hidden="true"></span><em>Job Board</em>
+            </button>
+            <button class="desktop-icon" data-app="post" style="--x: 132px; --y: 28px;">
+                <span class="icon-art icon-postad" aria-hidden="true"></span><em>Post Ad</em>
+            </button>
+            <button class="desktop-icon" data-app="about" style="--x: 132px; --y: 126px;">
+                <span class="icon-art icon-network" aria-hidden="true"></span><em>Network</em>
+            </button>
+
+            <section id="main-window" class="window main-window show">
+                <header>
+                    <span id="window-title">Welcome</span>
+                    <div class="window-buttons"><button data-window="min">_</button><button data-window="max">□</button><button id="close-app" title="Close App">×</button></div>
+                </header>
+                <div id="window-body" class="window-body"></div>
+            </section>
+
+            <footer class="taskbar">
+                <button id="start-button" class="start-button"><span></span>Start</button>
+                <div id="task-label" class="task-button active">My Terminal</div>
+                <button id="power-button" class="power-button" title="Turn off terminal">⏻ Power</button>
+                <div class="tray">
+                    <span class="tray-light"></span>
+                    <span id="session-email">No HotPost</span>
+                    <span id="clock">12:01 AM</span>
+                </div>
+            </footer>
+        </section>
+    </main>
+</body>
+</html>
