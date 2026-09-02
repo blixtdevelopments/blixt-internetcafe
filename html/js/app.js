@@ -156,6 +156,15 @@ function updateSessionUi() {
     }
 }
 
+function updatePoliceMdtUi() {
+    const mdt = state.config?.policeMdt || {};
+    const icon = $('#police-mdt-icon');
+    if (!icon) return;
+
+    $('#police-mdt-label').textContent = mdt.label || 'Police MDT';
+    icon.classList.toggle('hidden', mdt.available !== true);
+}
+
 async function refreshSession() {
     const res = await nui('getSession');
     if (res?.ok) {
@@ -424,8 +433,16 @@ function renderAbout() {
     `, 'network');
 }
 
+async function openPoliceMdt() {
+    const res = await nui('openPoliceMDT');
+    if (!res?.ok) {
+        renderHomeWithNotice(res?.message || 'Police MDT is unavailable.', 'error');
+    }
+}
+
 function openApp(app) {
     state.currentApp = app;
+    if (app === 'police-mdt') return openPoliceMdt();
     if (app === 'mail') return renderMail();
     if (app === 'fleabay') return renderPosts('fleabay');
     if (app === 'jobs') return renderPosts('jobs');
@@ -438,6 +455,7 @@ async function openTerminal(config) {
     state.config = config || {};
     applyScreenProfile(state.config.screen);
     $('#terminal-title').textContent = state.config.title || 'WinDos Net Terminal';
+    updatePoliceMdtUi();
     $('#boot-subtitle').textContent = state.config.subtitle || 'Public access gateway';
     $('#terminal').classList.remove('hidden');
     $('#terminal').classList.add('booting');
@@ -471,10 +489,25 @@ function closeTerminal() {
     $('#main-window').classList.add('show');
 }
 
+function suspendTerminal() {
+    $('#terminal').classList.add('hidden');
+}
+
+function resumeTerminal(data = {}) {
+    if (data.policeMdt) state.config.policeMdt = data.policeMdt;
+    updatePoliceMdtUi();
+    $('#terminal').classList.remove('hidden');
+    $('#terminal').classList.remove('booting');
+    $('#boot').classList.remove('active');
+    $('#desktop').classList.add('active');
+}
+
 window.addEventListener('message', (event) => {
     const data = event.data || {};
     if (data.action === 'open') openTerminal(data.config);
     if (data.action === 'close') closeTerminal();
+    if (data.action === 'suspend') suspendTerminal();
+    if (data.action === 'resume') resumeTerminal(data);
 });
 
 window.addEventListener('keydown', (e) => {

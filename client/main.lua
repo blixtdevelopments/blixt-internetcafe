@@ -3,6 +3,7 @@ local activeCam = nil
 local activeEntity = nil
 local activeComputerKey = nil
 local currentConfig = nil
+local mdtOpenFromComputer = false
 
 local function debugPrint(...)
     if Config.Debug then
@@ -12,6 +13,23 @@ end
 
 local function notify(message, notifyType)
     Bridge.Notify(message, notifyType, 'Computer')
+end
+
+local function getPoliceMdtResource()
+    return (Config.PoliceMDT and Config.PoliceMDT.resource) or 'ps-mdt'
+end
+
+local function hasPoliceMdtAccess()
+    if Config.PoliceMDT and Config.PoliceMDT.enabled == false then return false end
+
+    local resource = getPoliceMdtResource()
+    if GetResourceState(resource) ~= 'started' then return false end
+
+    local ok, isLeo = pcall(function()
+        return exports[resource]:IsLEOJob()
+    end)
+
+    return ok and isLeo == true
 end
 
 local function tableKeys(tbl)
@@ -107,6 +125,29 @@ local function destroyComputerCam()
     end
 end
 
+local function restoreComputerCam()
+    if not activeCam then return end
+    SetCamActive(activeCam, true)
+    RenderScriptCams(true, true, 250, true, true)
+end
+
+local function resumeComputerFromMdt()
+    if not mdtOpenFromComputer then return end
+    mdtOpenFromComputer = false
+
+    if not isUsingComputer then return end
+
+    restoreComputerCam()
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'resume',
+        policeMdt = {
+            available = hasPoliceMdtAccess(),
+            label = (Config.PoliceMDT and Config.PoliceMDT.label) or 'Police MDT'
+        }
+    })
+end
+
 local function closeComputer()
     if not isUsingComputer then return end
 
@@ -175,7 +216,11 @@ local function openComputer(entity)
             bootTime = Config.UI.bootTime,
             wallpaperLogo = Config.UI.wallpaperLogo,
             categories = Config.Categories,
-            screen = cfg.screen or Config.UI.screen
+            screen = cfg.screen or Config.UI.screen,
+            policeMdt = {
+                available = hasPoliceMdtAccess(),
+                label = (Config.PoliceMDT and Config.PoliceMDT.label) or 'Police MDT'
+            }
         }
     })
 end
@@ -249,6 +294,54 @@ RegisterNUICallback('close', function(_, cb)
     cb({ ok = true })
 end)
 
+RegisterNUICallback('openPoliceMDT', function(_, cb)
+    if not isUsingComputer then
+        cb({ ok = false, message = 'Computer session is no longer active.' })
+        return
+    end
+
+    if not hasPoliceMdtAccess() then
+        cb({ ok = false, message = 'Police MDT access denied.' })
+        return
+    end
+
+    local resource = getPoliceMdtResource()
+    mdtOpenFromComputer = true
+
+    SendNUIMessage({ action = 'suspend' })
+    SetNuiFocus(false, false)
+    Wait(0)
+
+    local ok, err = pcall(function()
+        exports[resource]:OpenMDT({
+            fromComputer = true,
+            sourceResource = GetCurrentResourceName(),
+            -- Pass the exact active prop's existing WinDos screen profile through
+            -- to ps-mdt so its NUI can occupy the same physical monitor area.
+            screen = (currentConfig and currentConfig.screen) or (Config.UI and Config.UI.screen) or nil
+        })
+    end)
+
+    if not ok then
+        debugPrint('Failed to open police MDT:', err)
+        resumeComputerFromMdt()
+        cb({ ok = false, message = 'Police MDT failed to open.' })
+        return
+    end
+
+    local openOk, isOpen = pcall(function()
+        return exports[resource]:IsMDTOpen()
+    end)
+
+    if not openOk or not isOpen then
+        resumeComputerFromMdt()
+        cb({ ok = false, message = 'Police MDT could not be opened.' })
+        return
+    end
+
+    cb({ ok = true })
+end)
+
 RegisterNUICallback('getSession', function(_, cb)
     local data = Bridge.CallbackAwait('blixt-internetcafe:server:getSession')
     cb(data or { ok = false })
@@ -282,6 +375,20 @@ RegisterNUICallback('deletePost', function(data, cb)
     cb(Bridge.CallbackAwait('blixt-internetcafe:server:deletePost', data) or { ok = false })
 end)
 
+local policeMdtResource = getPoliceMdtResource()
+
+AddEventHandler(policeMdtResource .. ':client:closed', function(context)
+    if not mdtOpenFromComputer then return end
+    if not (context and context.fromComputer == true) then return end
+    resumeComputerFromMdt()
+end)
+
+AddEventHandler(policeMdtResource .. ':client:externalViewClosed', function(context)
+    if not mdtOpenFromComputer then return end
+    if not (context and context.fromComputer == true) then return end
+    resumeComputerFromMdt()
+end)
+
 CreateThread(function()
     Wait(1000)
     addTargets()
@@ -289,7 +396,7 @@ end)
 
 CreateThread(function()
     while true do
-        if isUsingComputer then
+        if isUsingComputer and not mdtOpenFromComputer then
             DisableControlAction(0, 1, true) -- look left/right
             DisableControlAction(0, 2, true) -- look up/down
             DisableControlAction(0, 30, true)
@@ -312,6 +419,11 @@ CreateThread(function()
 end)
 
 AddEventHandler('onResourceStop', function(resource)
+    if resource == getPoliceMdtResource() and mdtOpenFromComputer then
+        resumeComputerFromMdt()
+        return
+    end
+
     if resource ~= GetCurrentResourceName() then return end
     if isUsingComputer then
         SetNuiFocus(false, false)

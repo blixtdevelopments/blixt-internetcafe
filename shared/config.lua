@@ -1,12 +1,12 @@
 Config = {}
 
-Config.Debug = false
+Config.Debug = true
 
 -- Framework support: 'auto', 'qb', 'qbx', or 'standalone'.
-Config.Framework = 'auto'
+Config.Framework = 'qbx'
 
 -- Target support: 'ox_target', 'qb-target', or false to use /usecomputer debug command only.
-Config.Target = 'qb-target'
+Config.Target = 'ox_target'
 
 -- First V1 prop. v_res_monitorsquare = 829413118
 Config.ComputerProps = {
@@ -265,6 +265,14 @@ Config.UI = {
     title = 'WinDos Net Terminal',
     subtitle = 'Public access gateway',
     wallpaperLogo = true
+}
+
+-- Optional police MDT desktop application. Access is checked through the MDT's
+-- IsLEOJob export, so any job using the configured LEO job type/group can see it.
+Config.PoliceMDT = {
+    enabled = true,
+    resource = 'ps-mdt',
+    label = 'Police MDT'
 }
 
 Config.Notifications = {
